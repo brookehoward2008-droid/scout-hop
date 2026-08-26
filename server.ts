@@ -34,9 +34,8 @@ function getGeminiClient(): GoogleGenAI {
   return geminiClient;
 }
 
-async function startServer() {
+export async function createApp() {
   const app = express();
-  const PORT = 3000;
 
   app.use(express.json());
 
@@ -770,9 +769,17 @@ Only return the raw JSON array. Do not include markdown ticks or explanation.`;
     });
   }
 
+  return app;
+}
+
+async function startServer() {
+  const PORT = 3000;
+  const app = await createApp();
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Block Explorer server running on http://0.0.0.0:${PORT}`);
   });
 }
 
-startServer();
+if (process.env.VERCEL !== '1') {
+  startServer();
+}
