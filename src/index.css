@@ -1,0 +1,59 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Nunito', sans-serif;
+  --font-display: 'Righteous', sans-serif;
+  
+  --color-game-bg: #0f172a;
+  --color-game-panel: #1e293b;
+  --color-neon-pink: #ff2a85;
+  --color-neon-blue: #00f0ff;
+  --color-neon-green: #39ff14;
+  --color-neon-yellow: #facc15;
+  --color-neon-purple: #c026d3;
+
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+  --animate-bounce-slight: bounce-slight 2s infinite;
+  --animate-spin-slow: spin 8s linear infinite;
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    100% { transform: scale(2); opacity: 0; }
+  }
+  @keyframes bounce-slight {
+    0%, 100% { transform: translateY(-5%); animation-timing-function: cubic-bezier(0.8,0,1,1); }
+    50% { transform: none; animation-timing-function: cubic-bezier(0,0,0.2,1); }
+  }
+}
+
+@import "leaflet/dist/leaflet.css";
+
+/* Game-like general styles */
+body {
+  background-color: var(--color-game-bg);
+}
+
+.game-btn {
+  @apply relative overflow-hidden transition-all duration-300 transform active:scale-95 font-display tracking-wide shadow-lg;
+}
+.game-btn::after {
+  content: '';
+  @apply absolute inset-0 bg-white/20 translate-y-full transition-transform duration-300;
+}
+.game-btn:hover::after {
+  @apply translate-y-0;
+}
+
+/* Leaflet container fixes */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  font-family: inherit;
+}

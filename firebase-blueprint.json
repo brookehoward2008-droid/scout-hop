@@ -1,0 +1,215 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile, scout points, and ORCA card status",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "scoutPoints": {
+          "type": "number"
+        },
+        "hasOrca": {
+          "type": "boolean"
+        },
+        "schoolName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "foundCacheIds": {
+          "type": "array"
+        },
+        "userSwagInventory": {
+          "type": "array"
+        },
+        "checkedInEvents": {
+          "type": "array"
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "currentStreak": {
+          "type": "number"
+        },
+        "lastAccessDate": {
+          "type": "string",
+          "maxLength": 50
+        }
+      },
+      "required": [
+        "userId",
+        "displayName"
+      ]
+    },
+    "Geocache": {
+      "title": "Geocache",
+      "description": "Community-shared geocache targets in King and Snohomish counties",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "county": {
+          "type": "string",
+          "enum": [
+            "king",
+            "snohomish"
+          ]
+        },
+        "city": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "lat": {
+          "type": "number"
+        },
+        "lng": {
+          "type": "number"
+        },
+        "difficulty": {
+          "type": "number"
+        },
+        "terrain": {
+          "type": "number"
+        },
+        "size": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "clue": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "hint": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "secretCode": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "virtualSwag": {
+          "type": "array"
+        },
+        "nearestTransit": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "xpReward": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "creatorUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "isCustom": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "county",
+        "city",
+        "lat",
+        "lng",
+        "secretCode"
+      ]
+    },
+    "GeocacheLog": {
+      "title": "GeocacheLog",
+      "description": "Log entry recording when a user finds a cache and trades swag",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "cacheId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "cacheName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "timestamp": {
+          "type": "number"
+        },
+        "swagTradedIn": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "swagTaken": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "userNote": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "xpEarned": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "userId",
+        "cacheId",
+        "cacheName",
+        "timestamp",
+        "xpEarned"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "User profile with stats, badges, and inventory"
+    },
+    "/geocaches/{cacheId}": {
+      "schema": {
+        "$ref": "#/entities/Geocache"
+      },
+      "description": "Geocache quest locations across King and Snohomish counties"
+    },
+    "/geocacheLogs/{logId}": {
+      "schema": {
+        "$ref": "#/entities/GeocacheLog"
+      },
+      "description": "Community find logs for geocaches"
+    }
+  }
+}

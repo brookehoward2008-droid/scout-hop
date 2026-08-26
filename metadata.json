@@ -1,0 +1,6 @@
+{
+  "name": "Block Explorer",
+  "description": "Interactive regional youth transit and geospatial discovery platform for King and Snohomish counties, featuring live departures, point-to-point route calculator, GeoScout geocaching game, and free youth centers & events discovery.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

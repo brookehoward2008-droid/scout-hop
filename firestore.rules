@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Validation for User Profile
+    function isValidUserProfile(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.displayName is string &&
+             data.displayName.size() > 0 &&
+             data.displayName.size() <= 100 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+             (!('scoutPoints' in data) || (data.scoutPoints is number)) &&
+             (!('hasOrca' in data) || (data.hasOrca is bool)) &&
+             (!('schoolName' in data) || (data.schoolName is string && data.schoolName.size() <= 120)) &&
+             (!('foundCacheIds' in data) || (data.foundCacheIds is list && data.foundCacheIds.size() <= 100)) &&
+             (!('userSwagInventory' in data) || (data.userSwagInventory is list && data.userSwagInventory.size() <= 100)) &&
+             (!('checkedInEvents' in data) || (data.checkedInEvents is list && data.checkedInEvents.size() <= 100)) &&
+             (!('currentStreak' in data) || (data.currentStreak is number)) &&
+             (!('lastAccessDate' in data) || (data.lastAccessDate is string && data.lastAccessDate.size() <= 50));
+    }
+
+    // Validation for Geocache
+    function isValidGeocache(data) {
+      return data.id is string &&
+             data.id.size() > 0 &&
+             data.id.size() <= 128 &&
+             data.name is string &&
+             data.name.size() > 0 &&
+             data.name.size() <= 120 &&
+             data.county in ['king', 'snohomish'] &&
+             data.city is string &&
+             data.city.size() > 0 &&
+             data.city.size() <= 100 &&
+             data.lat is number &&
+             data.lng is number &&
+             data.secretCode is string &&
+             data.secretCode.size() > 0 &&
+             data.secretCode.size() <= 50 &&
+             (!('difficulty' in data) || (data.difficulty is number)) &&
+             (!('terrain' in data) || (data.terrain is number)) &&
+             (!('size' in data) || (data.size is string && data.size.size() <= 30)) &&
+             (!('clue' in data) || (data.clue is string && data.clue.size() <= 500)) &&
+             (!('hint' in data) || (data.hint is string && data.hint.size() <= 500)) &&
+             (!('nearestTransit' in data) || (data.nearestTransit is string && data.nearestTransit.size() <= 120)) &&
+             (!('xpReward' in data) || (data.xpReward is number)) &&
+             (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+             (!('virtualSwag' in data) || (data.virtualSwag is list && data.virtualSwag.size() <= 20));
+    }
+
+    // Validation for Geocache Log
+    function isValidGeocacheLog(data) {
+      return data.userId is string &&
+             data.userId == request.auth.uid &&
+             data.cacheId is string &&
+             data.cacheId.size() > 0 &&
+             data.cacheId.size() <= 128 &&
+             data.cacheName is string &&
+             data.cacheName.size() > 0 &&
+             data.cacheName.size() <= 120 &&
+             data.timestamp is number &&
+             data.xpEarned is number &&
+             (!('swagTradedIn' in data) || (data.swagTradedIn is string && data.swagTradedIn.size() <= 100)) &&
+             (!('swagTaken' in data) || (data.swagTaken is string && data.swagTaken.size() <= 100)) &&
+             (!('userNote' in data) || (data.userNote is string && data.userNote.size() <= 500));
+    }
+
+    // User Profile Rules
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow update: if isOwner(userId) && isValidUserProfile(request.resource.data);
+      allow delete: if isOwner(userId);
+    }
+
+    // Geocaches Rules (Public read, authenticated create/update)
+    match /geocaches/{cacheId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidGeocache(request.resource.data);
+      allow update: if isSignedIn() && isValidGeocache(request.resource.data);
+      allow delete: if isSignedIn() && resource.data.creatorUid == request.auth.uid;
+    }
+
+    // Geocache Logs Rules (Public read for community, authenticated create)
+    match /geocacheLogs/{logId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidGeocacheLog(request.resource.data);
+      allow update, delete: if false;
+    }
+  }
+}
