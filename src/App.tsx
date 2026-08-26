@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { PRESET_LOCATIONS } from './data/presets';
 import { CommunityPlace, STOPS } from './data/transitCatalog';
 import { GeocachingModal } from './components/GeocachingModal';
@@ -351,6 +352,7 @@ export default function App() {
   return (
     <TransitProvider>
       <AppContent />
+      <Analytics />
     </TransitProvider>
   );
 }
