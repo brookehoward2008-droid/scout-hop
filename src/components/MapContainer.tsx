@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+// src/components/MapContainer.tsx
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { APIProvider, InfoWindow, Map, Marker, AdvancedMarker, useMap } from '@vis.gl/react-google-maps';
 import L from 'leaflet';
 import {
@@ -22,10 +23,12 @@ import {
 } from 'lucide-react';
 import { COMMUNITY_PLACES, CommunityPlace, STOPS, TRANSIT_NETWORK_LINES, TransitLineRoute, TransitStop } from '../data/transitCatalog';
 import { useApp } from '../services/transitStore';
-import { GeocodedLocationData, MapTypeStyle } from '../types';
+import { GeocodedLocationData, MapTypeStyle, YouthDiscoveryItem } from '../types';
 import { LocalInsightsBanner } from './LocalInsightsBanner';
 import { RideModeHud } from './RideModeHud';
 import { RoutePlannerCard } from './RoutePlannerCard';
+
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
 
 interface MapContainerProps {
   currentLocation: GeocodedLocationData | null;
@@ -170,7 +173,8 @@ const LeafletFallbackMap: React.FC<{
   mapType: MapTypeStyle;
   onOpenKeySettings?: () => void;
   hasNearbyTargets?: boolean;
-}> = ({ currentLocation, mapType, onOpenKeySettings, hasNearbyTargets }) => {
+  youthEvents: YouthDiscoveryItem[];
+}> = ({ currentLocation, mapType, onOpenKeySettings, hasNearbyTargets, youthEvents }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -519,7 +523,7 @@ const LeafletFallbackMap: React.FC<{
             <div class="absolute top-14 whitespace-nowrap rounded-lg ${
               isFound ? 'bg-emerald-950/80 border-[var(--color-neon-green)]/50 text-[var(--color-neon-green)]' : 'bg-slate-900/90 border-[var(--color-neon-blue)]/50 text-white'
             } px-2.5 py-1 text-[10px] font-black uppercase tracking-widest shadow-lg pointer-events-none border backdrop-blur-md">
-              ${isFound ? '✓ ' : '💎 '}${cache.name.split(' ')[0]}
+              ${isFound ? '✓ ' : '💎 '}${escapeHtml(cache.name.split(' ')[0])}
             </div>
           </div>
         `,
@@ -540,19 +544,43 @@ const LeafletFallbackMap: React.FC<{
             </span>
           </div>
           <div style="font-size: 13px; font-weight: 700; line-height: 1.3; margin-top: 2px;">
-            ${cache.name} ${isFound ? '✓ (Found)' : ''}
+            ${escapeHtml(cache.name)} ${isFound ? '✓ (Found)' : ''}
           </div>
           <div style="font-size: 11px; font-style: italic; color: #78716c; margin-top: 4px; background: #fffbeb; padding: 6px; border-radius: 8px; border: 1px solid #fde68a;">
-            "${cache.clue}"
+            "${escapeHtml(cache.clue)}"
           </div>
           <div style="font-size: 11px; color: #57534e; margin-top: 4px;">
-            Transit: <strong>${cache.nearestTransit}</strong>
+            Transit: <strong>${escapeHtml(cache.nearestTransit)}</strong>
           </div>
         </div>
       `;
       m.bindPopup(popupHtml);
     });
   }, [showGeocachingLayer, geocaches, foundCacheIds, activeTargetCache]);
+
+  // Keep unlocated feed items in the finder rather than inventing map positions.
+  useEffect(() => {
+    const layer = youthLayerGroupRef.current;
+    if (!layer) return;
+    layer.clearLayers();
+    if (!showYouthPlacesLayer) return;
+    for (const item of youthEvents) {
+      if (item.lat === null || item.lng === null) continue;
+      const icon = L.divIcon({
+        className: 'neon-radar-marker',
+        html: '<span class="radar-ring"></span><span class="radar-ping"></span>',
+        iconSize: [32, 32], iconAnchor: [16, 16],
+      });
+      const popup = document.createElement('div');
+      const heading = document.createElement('strong');
+      heading.textContent = item.name;
+      const details = document.createElement('p');
+      details.textContent = item.isSample ? 'Sample listing. Confirm details with the organizer.' : item.freeDetails;
+      popup.append(heading, details);
+      L.marker([item.lat, item.lng], { icon, title: `${item.isSample ? 'Sample: ' : ''}${item.name}` })
+        .addTo(layer).bindPopup(popup).on('click', () => setSelectedYouthItem(item));
+    }
+  }, [youthEvents, showYouthPlacesLayer, setSelectedYouthItem]);
 
   // Handle Active Ride Mode polyline & Moving Bus Marker
   useEffect(() => {
@@ -644,7 +672,7 @@ const LeafletFallbackMap: React.FC<{
             </svg>
           </div>
           <div class="absolute bottom-11 whitespace-nowrap rounded-md bg-stone-900 px-2 py-1 text-[11px] font-bold text-white shadow-lg">
-            ${currentLocation.formattedAddress.split(',')[0]}
+            ${escapeHtml(currentLocation.formattedAddress.split(',')[0])}
           </div>
         </div>
       `,
@@ -666,7 +694,7 @@ const LeafletFallbackMap: React.FC<{
           ${currentLocation.granularity || 'Geocoded Target'}
         </div>
         <div style="font-size: 13px; font-weight: 700; line-height: 1.3;">
-          ${currentLocation.formattedAddress}
+          ${escapeHtml(currentLocation.formattedAddress)}
         </div>
         <div style="font-family: monospace; font-size: 11px; color: #78716c; margin-top: 4px;">
           ${currentLocation.lat.toFixed(5)}°, ${currentLocation.lng.toFixed(5)}°
@@ -718,49 +746,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   insightsError,
   onRefreshInsights,
 }) => {
-  const [mapType, setMapType] = useState<MapTypeStyle>('roadmap');
-  const [showInfoWindow, setShowInfoWindow] = useState(true);
-  const [zoomLevel, setZoomLevel] = useState<number>(14);
-  const [gmpAuthFailed, setGmpAuthFailed] = useState<boolean>(false);
-  const [youthEvents, setYouthEvents] = useState<any[]>([]);
-  const [hasNearbyTargets, setHasNearbyTargets] = useState<boolean>(false);
-
-  useEffect(() => {
-    fetch('/api/youth-events/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: '', county: 'all', category: 'all' })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.items) {
-          setYouthEvents(data.items);
-        }
-      })
-      .catch(console.error);
-  }, []);
-
-  useEffect(() => {
-    if (!currentLocation) {
-      setHasNearbyTargets(false);
-      return;
-    }
-    
-    function deg2rad(deg: number) { return deg * (Math.PI/180); }
-    function getDistanceInMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
-      const R = 3958.8; 
-      const dLat = deg2rad(lat2-lat1);
-      const dLon = deg2rad(lon2-lon1); 
-      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
-      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-    }
-
-    const nearbyCache = geocaches.some((c: any) => getDistanceInMiles(currentLocation.lat, currentLocation.lng, c.lat, c.lng) <= 1.0);
-    const nearbyYouth = youthEvents.some((y: any) => getDistanceInMiles(currentLocation.lat, currentLocation.lng, y.lat, y.lng) <= 1.0);
-    
-    setHasNearbyTargets(nearbyCache || nearbyYouth);
-  }, [currentLocation, geocaches, youthEvents]);
-
   const {
     showTransitLayer,
     setShowTransitLayer,
@@ -779,7 +764,56 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     showYouthPlacesLayer,
     setShowYouthPlacesLayer,
     selectedYouthItem,
+    setSelectedYouthItem,
   } = useApp();
+
+  const [mapType, setMapType] = useState<MapTypeStyle>('roadmap');
+  const [showInfoWindow, setShowInfoWindow] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState<number>(14);
+  const [gmpAuthFailed, setGmpAuthFailed] = useState<boolean>(false);
+  const [youthEvents, setYouthEvents] = useState<YouthDiscoveryItem[]>([]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const response = await fetch('/api/youth-events/search', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ county: 'all', category: 'all' }), signal: controller.signal,
+        });
+        if (!response.ok) throw new Error('Discovery data unavailable');
+        const data = await response.json();
+        if (!controller.signal.aborted && Array.isArray(data.items)) setYouthEvents(data.items);
+      } catch (error) {
+        if (!controller.signal.aborted) console.warn('Discovery map refresh failed.');
+      }
+    };
+    void load();
+    const timer = window.setInterval(load, 60000);
+    return () => { controller.abort(); window.clearInterval(timer); };
+  }, []);
+
+  const hasNearbyTargets = useMemo(() => {
+    if (!currentLocation) {
+      return false;
+    }
+    
+    function deg2rad(deg: number) { return deg * (Math.PI/180); }
+    function getDistanceInMiles(lat1: number, lon1: number, lat2: number, lon2: number) {
+      const R = 3958.8; 
+      const dLat = deg2rad(lat2-lat1);
+      const dLon = deg2rad(lon2-lon1); 
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2); 
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+    }
+
+    const nearbyCache = showGeocachingLayer && geocaches.some((c: any) => getDistanceInMiles(currentLocation.lat, currentLocation.lng, c.lat, c.lng) <= 1.0);
+    const nearbyYouth = showYouthPlacesLayer && youthEvents.some((y) => y.lat !== null && y.lng !== null && getDistanceInMiles(currentLocation.lat, currentLocation.lng, y.lat, y.lng) <= 1.0);
+    
+    return nearbyCache || nearbyYouth;
+  }, [currentLocation, geocaches, youthEvents, showYouthPlacesLayer, showGeocachingLayer]);
+
+
 
   // Catch Google Maps Authentication Failure (ApiProjectMapError / Missing Key)
   useEffect(() => {
@@ -822,6 +856,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           mapType={mapType}
           onOpenKeySettings={onOpenKeySettings}
           hasNearbyTargets={hasNearbyTargets}
+          youthEvents={youthEvents}
         />
       ) : (
         <APIProvider apiKey={apiKey}>
@@ -891,9 +926,15 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                   key={cache.id}
                   position={{ lat: cache.lat, lng: cache.lng }}
                   onClick={() => setActiveTargetCache(cache)}
-                  title={`Geocache: ${cache.name} (+${cache.xpReward} XP)`}
+                  title={`Geocache: ${escapeHtml(cache.name)} (+${cache.xpReward} XP)`}
                 />
               ))}
+
+            {showYouthPlacesLayer && youthEvents.filter(item => item.lat !== null && item.lng !== null).map(item => (
+              <Marker key={item.id} position={{ lat: item.lat!, lng: item.lng! }}
+                title={`${item.isSample ? 'Sample: ' : ''}${item.name}`}
+                onClick={() => setSelectedYouthItem(item)} />
+            ))}
 
             {/* Active Moving Bus Marker in Ride Mode */}
             {activeRide && (

@@ -1,3 +1,4 @@
+// src/App.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { PRESET_LOCATIONS } from './data/presets';
 import { CommunityPlace, STOPS } from './data/transitCatalog';
@@ -131,6 +132,7 @@ function AppContent() {
         granularity: 'ROOFTOP',
         types: ['transit_station'],
         placeId: `transit-${lat}-${lng}`,
+        query: '', timestamp: Date.now(),
       });
       if (window.innerWidth < 1024) {
         setMobileTab('map');
@@ -148,6 +150,7 @@ function AppContent() {
         granularity: 'ROOFTOP',
         types: ['establishment'],
         placeId: place.id,
+        query: '', timestamp: Date.now(),
       });
       if (window.innerWidth < 1024) {
         setMobileTab('map');
@@ -212,6 +215,7 @@ function AppContent() {
         granularity: 'ROOFTOP',
         types: ['point_of_interest'],
         placeId: `geocache-${lat}-${lng}`,
+        query: '', timestamp: Date.now(),
       });
       if (window.innerWidth < 1024) {
         setMobileTab('map');
@@ -230,6 +234,7 @@ function AppContent() {
         granularity: 'ROOFTOP',
         types: ['establishment'],
         placeId: `youth-${lat}-${lng}`,
+        query: '', timestamp: Date.now(),
       });
       if (window.innerWidth < 1024) {
         setMobileTab('map');
@@ -274,7 +279,7 @@ function AppContent() {
       {/* Desktop Split-Screen: 1/3 Width Left Control Panel */}
       <div
         id="desktop-sidebar-container"
-        className={`w-full lg:w-1/3 xl:w-1/3 min-w-[340px] max-w-full lg:max-w-[480px] h-full flex-shrink-0 z-10 ${
+        className={`w-full lg:w-1/3 xl:w-1/3 min-w-0 max-w-full lg:max-w-[480px] h-full flex-shrink-0 z-10 ${
           mobileTab === 'panel' ? 'block' : 'hidden lg:block'
         }`}
       >
@@ -341,7 +346,7 @@ function AppContent() {
       <YouthDiscoveryModal
         isOpen={showYouthModal}
         onClose={() => setShowYouthModal(false)}
-        onFocusPlaceOnMap={handleFocusYouthPlace}
+        onSelectOnMap={handleFocusYouthPlace}
       />
     </div>
   );

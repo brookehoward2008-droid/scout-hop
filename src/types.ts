@@ -1,3 +1,4 @@
+// src/types.ts
 export interface LatLngLiteral {
   lat: number;
   lng: number;
@@ -117,14 +118,18 @@ export interface YouthDiscoveryItem {
   freeDetails: string;
   ageGroup: string;
   address: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   transitAccess: string;
   scheduleOrDate: string;
   scoutPoints: number;
   tags: string[];
   contactOrLink?: string;
   verifiedFree: boolean;
+  isSample?: boolean;
+  costStatus?: "reported_free" | "unknown";
+  sourceName?: string;
+  publishedAt?: string;
 }
 
 export type GeocacheSize = 'Micro' | 'Small' | 'Regular' | 'Large' | 'Mystery';

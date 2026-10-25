@@ -1,3 +1,4 @@
+// src/components/TransitHomeView.tsx
 import React, { useEffect, useState } from 'react';
 import {
   ArrowRight,
@@ -165,7 +166,7 @@ export const TransitHomeView: React.FC<TransitHomeViewProps> = ({
           </div>
 
           <div className="mt-3">
-            <h3 className="font-display text-sm font-bold text-[var(--color-neon-blue)] flex items-center justify-between">
+            <h3 className="font-display text-sm font-bold leading-relaxed text-[var(--color-neon-blue)] flex flex-col items-start gap-1">
               <span>GeoScout Quest</span>
               <span className="text-xs text-amber-600 dark:text-amber-400 group-hover:translate-x-0.5 transition-transform">
                 Play →
@@ -188,19 +189,19 @@ export const TransitHomeView: React.FC<TransitHomeViewProps> = ({
               <Sparkles className="h-5 w-5" />
             </div>
             <span className="rounded-full bg-[var(--color-neon-green)]/20 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold px-2 py-0.5 border border-emerald-300 dark:border-emerald-800">
-              100% Free
+              Explore
             </span>
           </div>
 
           <div className="mt-3">
-            <h3 className="font-display text-sm font-bold text-[var(--color-neon-blue)] flex items-center justify-between">
+            <h3 className="font-display text-sm font-bold leading-relaxed text-[var(--color-neon-blue)] flex flex-col items-start gap-1">
               <span>Youth Centers & Events</span>
               <span className="text-xs text-indigo-600 dark:text-indigo-400 group-hover:translate-x-0.5 transition-transform">
-                Search API →
+                Find activities →
               </span>
             </h3>
             <p className="mt-1 text-[11px] text-slate-300 leading-snug">
-              Find teen rooms, free STEM labs, open gyms & community events.
+              Explore youth places and events. Check organizer details.
             </p>
           </div>
         </button>
