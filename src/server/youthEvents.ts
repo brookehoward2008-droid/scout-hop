@@ -5,7 +5,7 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import path from 'node:path';
 import type { Express, Request, Response } from 'express';
 import Parser from 'rss-parser';
-import { SAMPLE_YOUTH_DIRECTORY } from '../data/youthDirectory.ts';
+import { SAMPLE_YOUTH_DIRECTORY } from '../data/youthDirectory.js';
 import type { YouthDiscoveryItem } from '../types.ts';
 
 export interface FeedSource {
