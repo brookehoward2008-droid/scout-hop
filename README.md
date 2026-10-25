@@ -1,76 +1,42 @@
-# HopScout / Block Explorer
+# HopScout
 
-Regional transit and youth discovery prototype for King and Snohomish counties.
-The existing Google Maps, Leaflet fallback, route planner, Firebase sign-in and
-GeoScout features remain part of the app.
+The app serves 40 sourced facilities across all 39 Washington counties from persistent embedded PostgreSQL (PGlite). No Docker, Docker Hub, database service or paid database account is required.
 
-## Run
+## Run locally
 
-Requires Node.js 22 or newer.
+Requires Node.js 22.9+. From the repository root in PowerShell:
 
-```sh
-npm ci
-npm run dev
+```powershell
+npm.cmd ci
+npm.cmd run dev
 ```
 
-Open `http://localhost:3000`. Google Maps and Gemini keys are optional for
-starting the app: Leaflet works without a Google key, while AI insights require
-the existing Gemini integration. Copy `.env.example` to `.env` for configuration.
-Only browser-restricted Google Maps keys belong in `VITE_` variables. Private
-server keys and the ingestion token must never be committed.
+Open http://127.0.0.1:3000 and open Youth-Friendly Places. Startup initializes/upserts the reviewed seed automatically. County/category/search filters query SQL on each request. Google Maps/Gemini keys remain optional for directory use; existing maps, transit and sign-in features retain their own configuration.
 
-```sh
-npm run lint
-npm test
-npm run build
-npm start
+Default database: `database/.local/hopscout`. To use Brooke's previously prepared database, create a local `.env`:
+
+```dotenv
+HOPSCOUT_DB_DIR=C:/Users/brook/hopscout-database/.local/hopscout
+PORT=3000
 ```
 
-`npm start` serves the compiled frontend and backend together, including API
-routes. `npm run preview` previews the frontend only. On macOS/Linux,
-`bash deploy.sh` installs, tests, builds and starts the local production server.
-It does not publish a hosted deployment. Set `PORT` if 3000 is occupied.
+That is the configuration used in this local checkout. Git ignores .env, runtime databases and dependencies. Use one process at a time per embedded database directory. Stop the app before standalone database commands or backups. The engine runs in-process and has no network connection string.
 
-## Youth discoveries
+## Data boundaries
 
-- The original directory is retained as **sample listings**. Its facilities,
-  fees, dates and availability are unverified and must not be used as travel advice.
-- With no ingested source items, the finder displays those labeled samples.
-  Once source items exist, the finder searches those items instead.
-- No AI-generated events are added to discovery results. The old generator could
-  produce realistic-looking addresses and unverified free-admission claims.
-- RSS publication dates are not event dates. Items without explicit coordinates
-  appear in search, with the map action disabled. Coordinates are never invented.
-- Source text may report free admission; this is labeled as a source claim,
-  not independent verification. Conflicting fee text keeps the cost unknown.
-- All filters apply to every discovery result. “Advertised Free Events” requires
-  an explicit free-admission claim in the source text.
+See [all facilities and official sources](database/STATEWIDE-SOURCES.md) and [verification notes](database/VERIFICATION.md). Verification covers identity/address. Public libraries are an editorial selection of general youth-friendly reading/learning places, not certification of teen-only rooms, supervision or current programs.
 
-Set `HOPSCOUT_FEEDS` to a JSON array of reviewed RSS/Atom sources. Each entry must
-include `name`, an HTTPS `url`, `county` (`king` or `snohomish`), and `city`.
-The server polls configured sources at startup and every 15 minutes. The old
-Sno-Isle webpage and county JSON dataset are not assumed to be RSS feeds.
-Failed sources are logged without deleting the last collected items.
+Unknown fees, ages, schedules, transit and coordinates remain null. The finder hides empty detail rows and does not invent XP. Map actions are disabled without verified coordinates. The nearby endpoint excludes unlocated facilities.
 
-The default persistent store is `data/youth-events.json`, excluded from git.
-Use `HOPSCOUT_DATA_FILE` to point to persistent storage on your host. The store
-retains up to 2,000 discoveries and supports a single server process. If an old
-PostgreSQL database is configured through `SQL_HOST`, the server attempts to
-import its records without changing the original database.
+The previous sample directory, feed store, legacy SQL import and automatic polling are not used by the app. Batch ingestion is disabled. Events/geocaches endpoints return empty inventories. Fictional bundled caches and loading of unreviewed cloud/browser caches are disabled; legacy browser data is preserved. Cache creation is unavailable pending a reviewed placement workflow.
 
-For the optional standalone collector, set a private `HOPSCOUT_INGEST_TOKEN` on
-both the collector and server, then run `npm run scrape`. The batch endpoint
-requires that token and validates all records. Built-in polling does not need a
-token. `API_INGEST_URL` can select another server.
+## Checks and production
 
-Discovery endpoints:
+```powershell
+npm.cmd test
+node --test database/setup.test.mjs
+npm.cmd run build
+npm.cmd start
+```
 
-- `POST /api/youth-events/search`: `{ "query": "", "county": "all", "category": "all", "city": "" }`
-- `GET /api/youth-events/db`: collected source items
-- `GET /api/places/nearby`: collected items with source-provided coordinates;
-  geographic radius filtering is not implemented
-- `POST /api/youth-events/batch`: authenticated ingestion of `{ "events": [...] }`
-
-Live organizer feeds, provider credentials, public deployment and real transit
-arrival accuracy require separate validation. The automated tests use local
-fixtures and do not send data to Firebase or paid APIs.
+Start commands from the repository root. Keep the checked-in database directory alongside dist and installed dependencies: the production server uses its schema and seed files. The server binds to localhost. No public deployment is performed. External maps, Firebase and transit services are separate from directory database verification.

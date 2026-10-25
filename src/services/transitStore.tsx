@@ -165,10 +165,7 @@ export const TransitProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   // Geocaching Game Quest State
-  const [geocaches, setGeocaches] = useState<GeocacheItem[]>(() => {
-    const saved = localStorage.getItem('geo_scout_caches');
-    return saved ? JSON.parse(saved) : INITIAL_GEOCACHES;
-  });
+  const [geocaches, setGeocaches] = useState<GeocacheItem[]>([]);
   const [foundCacheIds, setFoundCacheIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('geo_scout_found');
     return saved ? JSON.parse(saved) : [];
@@ -278,30 +275,7 @@ export const TransitProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Sync Community Geocaches & Logs from Firestore
   useEffect(() => {
-    const geocachesPath = 'geocaches';
-    const unsubCaches = onSnapshot(
-      collection(db, geocachesPath),
-      (snapshot) => {
-        if (!snapshot.empty) {
-          const cloudCaches: GeocacheItem[] = [];
-          snapshot.forEach((d) => {
-            cloudCaches.push(d.data() as GeocacheItem);
-          });
-          // Merge initial + cloud
-          const merged = [...INITIAL_GEOCACHES];
-          cloudCaches.forEach((cc) => {
-            if (!merged.some((m) => m.id === cc.id)) {
-              merged.push(cc);
-            }
-          });
-          setGeocaches(merged);
-        }
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, geocachesPath);
-      }
-    );
-
+    // Unreviewed cloud and browser caches are not part of the verified inventory.
     const logsPath = 'geocacheLogs';
     const unsubLogs = onSnapshot(
       collection(db, logsPath),
@@ -320,14 +294,13 @@ export const TransitProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
 
     return () => {
-      unsubCaches();
       unsubLogs();
     };
   }, []);
 
   // Save changes to Firestore if user logged in, plus localStorage
   useEffect(() => {
-    localStorage.setItem('geo_scout_caches', JSON.stringify(geocaches));
+    // Preserve legacy browser storage without loading it as verified cache data.
   }, [geocaches]);
 
   useEffect(() => {
@@ -566,29 +539,7 @@ export const TransitProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Add custom user-created cache & persist to Firebase
   const addCustomGeocache = async (cacheData: Omit<GeocacheItem, 'id' | 'isCustom'>) => {
-    const newId = `custom-cache-${Date.now()}`;
-    const newCache: GeocacheItem = {
-      ...cacheData,
-      id: newId,
-      isCustom: true,
-      createdBy: displayName || currentUser?.displayName || 'Scout Explorer',
-    };
-    setGeocaches((prev) => [newCache, ...prev]);
-    addScoutPoints(250);
-
-    // Save to Firestore if signed in
-    if (currentUser) {
-      const cachePath = `geocaches/${newId}`;
-      try {
-        await setDoc(doc(db, 'geocaches', newId), {
-          ...newCache,
-          creatorUid: currentUser.uid,
-          createdAt: new Date().toISOString(),
-        });
-      } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, cachePath);
-      }
-    }
+    throw new Error('Cache creation is unavailable until a reviewed placement workflow is configured.');
   };
 
   // Navigate to Geocache with walking route calculation
