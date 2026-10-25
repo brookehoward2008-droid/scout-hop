@@ -67,7 +67,7 @@ test('serialized updates survive reload and strip unsafe links and verification 
   } finally { await rm(dir, { recursive: true }); }
 });
 
-test('API labels samples, rejects unauthorized/invalid writes and excludes unlocated map items', async () => {
+test('API stays empty without records, rejects unauthorized/invalid writes and excludes unlocated map items', async () => {
   const app = express();
   app.use(express.json());
   const store = new YouthEventStore();
@@ -79,8 +79,8 @@ test('API labels samples, rejects unauthorized/invalid writes and excludes unloc
   const post = (route: string, body: unknown, token = '') => fetch(base + route, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token }, body: JSON.stringify(body) });
   try {
     const initial = await (await post('/api/youth-events/search', { county: 'king' })).json();
-    assert.equal(initial.sampleMode, true);
-    assert.ok(initial.items.length > 0);
+    assert.equal(initial.sampleMode, false);
+    assert.equal(initial.items.length, 0);
     assert.ok(initial.items.every(item => item.isSample && !item.verifiedFree && item.county === 'king'));
     assert.equal((await post('/api/youth-events/batch', { events: [event()] })).status, 401);
     assert.equal((await post('/api/youth-events/batch', { events: [{ name: 'Incomplete' }] }, 'Bearer fixture-token')).status, 400);

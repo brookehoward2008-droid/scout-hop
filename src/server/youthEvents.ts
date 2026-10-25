@@ -139,9 +139,9 @@ export function searchDiscoveries(items: YouthDiscoveryItem[], filters: Record<s
 export function registerYouthRoutes(app: Express, store: YouthEventStore, ingestToken = process.env.HOPSCOUT_INGEST_TOKEN) {
   app.post('/api/youth-events/search', (req, res) => {
     const sourceItems = store.all();
-    const allItems = sourceItems.length ? sourceItems : SAMPLE_YOUTH_DIRECTORY;
+    const allItems = sourceItems;
     const items = searchDiscoveries(allItems, req.body || {});
-    res.json({ success: true, count: items.length, items, sampleMode: !sourceItems.length });
+    res.json({ success: true, count: items.length, items, sampleMode: false });
   });
   app.get('/api/youth-events/db', (_req, res) => res.json({ success: true, items: store.all() }));
   app.get('/api/places/nearby', (_req, res) => res.json({ success: true, pois: store.all().filter(item => item.lat !== null && item.lng !== null) }));

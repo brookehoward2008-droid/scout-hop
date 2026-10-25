@@ -1,7 +1,7 @@
 // server.ts
 // Serve the existing app and its discovery services from one origin.
 import 'dotenv/config';
-import { createYouthEventStore, registerYouthRoutes, startFeedPolling } from './src/server/youthEvents.ts';
+import { openLocalDirectory, registerLocalDirectoryRoutes } from './src/server/localDirectory.ts';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -307,9 +307,8 @@ async function startServer() {
 
   // Geocoding V4 API proxy endpoint
 
-  const youthStore = await createYouthEventStore();
-  registerYouthRoutes(app, youthStore);
-  const stopFeedPolling = startFeedPolling(youthStore);
+  const localDirectory = await openLocalDirectory();
+  registerLocalDirectoryRoutes(app, localDirectory);
 
   app.get('/api/geocode', async (req, res) => {
     try {
@@ -392,12 +391,12 @@ async function startServer() {
     });
   }
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Block Explorer server running on http://0.0.0.0:${PORT}`);
+  const server = app.listen(PORT, '127.0.0.1', () => {
+    console.log(`HopScout server running on http://127.0.0.1:${PORT}`);
   });
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-    process.once(signal, () => { stopFeedPolling(); server.close(() => process.exit(0)); });
+    process.once(signal, () => { server.close(async () => { await localDirectory.close(); process.exit(0); }); });
   }
 }
 
-startServer();
+startServer().catch(error => { console.error('HopScout startup failed:', error.message); process.exitCode = 1; });

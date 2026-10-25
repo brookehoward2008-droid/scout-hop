@@ -11,9 +11,12 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
-    "scrape": "node --import tsx src/scripts/scraper.ts"
+    "scrape": "node --import tsx src/scripts/scraper.ts",
+    "db:setup": "node database/local.mjs setup",
+    "db:status": "node database/local.mjs status"
   },
   "dependencies": {
+    "@electric-sql/pglite": "^0.3.14",
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.1.14",
     "@types/leaflet": "^1.9.22",

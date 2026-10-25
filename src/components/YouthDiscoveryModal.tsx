@@ -41,19 +41,23 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
   const requestRef = useRef<AbortController | null>(null);
 
   // Filters
-  const [countyFilter, setCountyFilter] = useState<'all' | 'king' | 'snohomish'>('all');
+  const [countyFilter, setCountyFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'directory' | 'ai_search'>('directory');
 
+  const [counties, setCounties] = useState<string[]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch('/api/counties', {signal:controller.signal}).then(r => {if(!r.ok) throw new Error(); return r.json();}).then(data => setCounties(data.counties)).catch(() => {if(!controller.signal.aborted) setError('Unable to load counties.');});
+    return () => controller.abort();
+  }, []);
+
   const categories = [
-    { id: 'all', label: 'All Places & Events' },
-    { id: 'youth_center', label: 'Youth & Teen Centers' },
-    { id: 'free_event', label: 'Advertised Free Events' },
-    { id: 'maker_space', label: 'Tech & STEM Labs' },
-    { id: 'sports_rec', label: 'Sports & Open Gym' },
-    { id: 'arts_culture', label: 'Arts, Music & Culture' },
-    { id: 'teen_room', label: 'Library Teen Lounges' },
+    { id: 'all', label: 'All Places' },
+    { id: 'library', label: 'Libraries' },
+    { id: 'youth_center', label: 'Youth Clubs' },
+    { id: 'sports_rec', label: 'Community Recreation' },
   ];
 
   const fetchYouthPlaces = async (customQuery?: string) => {
@@ -115,13 +119,13 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
             </div>
             <div>
               <h2 className="font-display text-lg sm:text-xl font-bold text-stone-950 dark:text-white flex flex-wrap items-center gap-2">
-                Youth Places & Events
+                Youth-Friendly Places
                 <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 border border-emerald-300 dark:border-emerald-800">
                   Check organizer details
                 </span>
               </h2>
               <p className="text-xs text-stone-600 dark:text-stone-400">
-                Explore King & Snohomish. Sample listings are labeled; confirm cost and availability before traveling.
+                Explore places across all 39 Washington counties. Check official sources before traveling.
               </p>
             </div>
           </div>
@@ -188,24 +192,11 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
               <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider">
                 County:
               </span>
-              {[
-                { id: 'all', label: 'All Counties' },
-                { id: 'king', label: 'King County' },
-                { id: 'snohomish', label: 'Snohomish County' },
-              ].map((c) => (
-                <button
-                  key={c.id}
-                  id={`btn-filter-county-${c.id}`}
-                  onClick={() => setCountyFilter(c.id as any)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-all ${
-                    countyFilter === c.id
-                      ? 'bg-indigo-600 text-white shadow-xs'
-                      : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:bg-stone-100'
-                  }`}
-                >
-                  {c.label}
-                </button>
-              ))}
+              <select id="select-youth-county" aria-label="County" value={countyFilter}
+                onChange={e => setCountyFilter(e.target.value)} className="rounded-lg border p-2 text-xs bg-white dark:bg-stone-800">
+                <option value="all">All 39 Counties</option>
+                {counties.map(county => <option key={county} value={county}>{county} County</option>)}
+              </select>
             </div>
 
             {/* Quick Filter Categories */}
@@ -237,7 +228,7 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                 Searching youth places and events...
               </p>
               <p className="text-xs text-stone-400 mt-1">
-                Loading source listings or labeled directory samples
+                Loading the verified facility directory
               </p>
             </div>
           ) : error ? (
@@ -279,11 +270,11 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                                 : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950 dark:text-indigo-300'
                             }`}
                           >
-                            {item.county === 'snohomish' ? 'Snohomish County' : 'King County'}
+                            {item.county} County
                           </span>
-                          <span className="rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 text-[9px] font-bold">
+                          {item.ageGroup && <span className="rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 text-[9px] font-bold">
                             {item.ageGroup}
-                          </span>
+                          </span>}
                           <span className="rounded-md bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 px-1.5 py-0.5 text-[9px] font-medium">
                             {item.city}
                           </span>
@@ -294,9 +285,9 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                         </h3>
                       </div>
 
-                      <div className="rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 shrink-0">
+                      {item.scoutPoints != null && item.scoutPoints > 0 && <div className="rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300 shrink-0">
                         +{item.scoutPoints} XP
-                      </div>
+                      </div>}
                     </div>
 
                     {/* Description */}
@@ -305,25 +296,25 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                     </p>
 
                     {/* Free Perks Callout */}
-                    <div className="mt-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 p-2.5">
+                    {item.freeDetails && <div className="mt-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 p-2.5">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 dark:text-emerald-200">
                         <Info className="h-3.5 w-3.5 shrink-0" />
                         <span>{item.freeDetails}</span>
                       </div>
-                    </div>
+                    </div>}
 
                     {/* Meta Details: Hours & Transit */}
                     <div className="mt-3 space-y-1.5 text-[11px] text-stone-500 dark:text-stone-400">
-                      <div className="flex items-center gap-1.5">
+                      {item.scheduleOrDate && <div className="flex items-center gap-1.5">
                         <Calendar className="h-3.5 w-3.5 shrink-0 text-stone-400" />
                         <span>{item.scheduleOrDate}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
+                      </div>}
+                      {item.transitAccess && <div className="flex items-center gap-1.5">
                         <Navigation className="h-3.5 w-3.5 shrink-0 text-indigo-500" />
                         <span className="font-medium text-stone-700 dark:text-stone-300">
                           {item.transitAccess}
                         </span>
-                      </div>
+                      </div>}
                       <div className="flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5 shrink-0 text-stone-400" />
                         <span>{item.address}</span>
@@ -359,7 +350,7 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                       className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <MapPin className="h-3.5 w-3.5" />
-                      <span>{item.lat === null || item.lng === null ? 'Location not provided' : 'View on Map'}</span>
+                      <span>{item.lat === null || item.lng === null ? 'Coordinates not verified' : 'View on Map'}</span>
                     </button>
 
                     {item.contactOrLink && /^https?:\/\//i.test(item.contactOrLink) && (
@@ -385,7 +376,7 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-indigo-500" />
             <span>
-              <strong>Source-backed listings and labeled samples.</strong> Check organizer websites.
+              <strong>Facility identities and addresses checked.</strong> Program details and eligibility may be unknown.
             </span>
           </div>
           <button
