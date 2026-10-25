@@ -249,7 +249,7 @@ function AppContent() {
   }, []);
 
   return (
-    <div id="block-explorer-app" className="flex h-screen w-screen overflow-hidden bg-[var(--color-game-bg)] font-sans antialiased text-white selection:bg-[var(--color-neon-pink)] selection:text-white">
+    <div id="block-explorer-app" className="flex w-full overflow-hidden bg-[var(--color-game-bg)] font-sans antialiased text-white selection:bg-[var(--color-neon-pink)] selection:text-white">
       {/* Mobile Tab Switcher */}
       <div className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center rounded-full border border-[var(--color-neon-blue)]/30 bg-[var(--color-game-panel)]/95 p-1 shadow-2xl backdrop-blur-md">
         <button
@@ -309,7 +309,7 @@ function AppContent() {
       {/* Desktop Split-Screen: 2/3 Width Right Full-Height Interactive Map */}
       <main
         id="desktop-map-container"
-        className={`flex-1 h-full relative ${
+        className={`flex-1 min-w-0 min-h-0 h-full relative isolate ${
           mobileTab === 'map' ? 'block' : 'hidden lg:block'
         }`}
       >

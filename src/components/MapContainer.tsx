@@ -260,11 +260,33 @@ const LeafletFallbackMap: React.FC<{
 
     tileLayerRef.current = tileLayer;
 
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
+    // Mobile tabs mount this map under display:none. Recheck after layout
+    // whenever it becomes visible or Safari's available viewport changes.
+    const container = mapContainerRef.current;
+    let resizeFrame = 0;
+    const scheduleResize = () => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        if (container.clientWidth > 0 && container.clientHeight > 0) {
+          map.invalidateSize({ animate: false, pan: false, debounceMoveend: true });
+        }
+      });
+    };
+    const resizeObserver = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(scheduleResize)
+      : null;
+    resizeObserver?.observe(container);
+    window.addEventListener('resize', scheduleResize);
+    window.visualViewport?.addEventListener('resize', scheduleResize);
+    document.addEventListener('visibilitychange', scheduleResize);
+    scheduleResize();
 
     return () => {
+      resizeObserver?.disconnect();
+      cancelAnimationFrame(resizeFrame);
+      window.removeEventListener('resize', scheduleResize);
+      window.visualViewport?.removeEventListener('resize', scheduleResize);
+      document.removeEventListener('visibilitychange', scheduleResize);
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -859,7 +881,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           youthEvents={youthEvents}
         />
       ) : (
-        <APIProvider apiKey={apiKey}>
+        <APIProvider apiKey={apiKey} onError={() => setGmpAuthFailed(true)}>
           <Map id="block-explorer-map" mapId="DEMO_MAP_ID"
             defaultCenter={defaultCenter}
             center={activePosition}
