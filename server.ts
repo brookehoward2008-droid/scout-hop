@@ -4,7 +4,6 @@ import { sql } from 'drizzle-orm';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 
 
@@ -34,7 +33,7 @@ function getGeminiClient(): GoogleGenAI {
   return geminiClient;
 }
 
-export async function createApp() {
+export async function createApp({ serveFrontend = false } = {}) {
   const app = express();
 
   app.use(express.json());
@@ -754,15 +753,21 @@ Only return the raw JSON array. Do not include markdown ticks or explanation.`;
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
+  // API misses must not fall through to the frontend HTML response.
+  app.use('/api', (req, res) => {
+    res.status(404).json({ error: true, message: 'API route not found.' });
+  });
+
+  // Vercel serves the Vite build separately from the API function.
+  if (serveFrontend && process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(currentDir, 'dist');
+  } else if (serveFrontend) {
+    const distPath = path.basename(currentDir) === 'dist' ? currentDir : path.join(currentDir, 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
@@ -770,16 +775,4 @@ Only return the raw JSON array. Do not include markdown ticks or explanation.`;
   }
 
   return app;
-}
-
-async function startServer() {
-  const PORT = 3000;
-  const app = await createApp();
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Block Explorer server running on http://0.0.0.0:${PORT}`);
-  });
-}
-
-if (process.env.VERCEL !== '1') {
-  startServer();
 }

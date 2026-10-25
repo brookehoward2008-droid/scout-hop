@@ -725,6 +725,26 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   const [youthEvents, setYouthEvents] = useState<any[]>([]);
   const [hasNearbyTargets, setHasNearbyTargets] = useState<boolean>(false);
 
+  const {
+    showTransitLayer,
+    setShowTransitLayer,
+    activeRide,
+    setSelectedStop,
+    setSelectedPlace,
+    handleMapClickForRoute,
+    routeOrigin,
+    routeDestination,
+    geocaches,
+    foundCacheIds,
+    activeTargetCache,
+    setActiveTargetCache,
+    showGeocachingLayer,
+    setShowGeocachingLayer,
+    showYouthPlacesLayer,
+    setShowYouthPlacesLayer,
+    selectedYouthItem,
+  } = useApp();
+
   useEffect(() => {
     fetch('/api/youth-events/search', {
       method: 'POST',
@@ -761,25 +781,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     setHasNearbyTargets(nearbyCache || nearbyYouth);
   }, [currentLocation, geocaches, youthEvents]);
 
-  const {
-    showTransitLayer,
-    setShowTransitLayer,
-    activeRide,
-    setSelectedStop,
-    setSelectedPlace,
-    handleMapClickForRoute,
-    routeOrigin,
-    routeDestination,
-    geocaches,
-    foundCacheIds,
-    activeTargetCache,
-    setActiveTargetCache,
-    showGeocachingLayer,
-    setShowGeocachingLayer,
-    showYouthPlacesLayer,
-    setShowYouthPlacesLayer,
-    selectedYouthItem,
-  } = useApp();
+
 
   // Catch Google Maps Authentication Failure (ApiProjectMapError / Missing Key)
   useEffect(() => {
