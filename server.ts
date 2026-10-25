@@ -1,7 +1,7 @@
 // server.ts
 // Serve the existing app and its discovery services from one origin.
 import 'dotenv/config';
-import { createYouthEventStore, registerYouthRoutes, startFeedPolling } from './src/server/youthEvents.ts';
+import { createYouthEventStore, registerYouthRoutes, startFeedPolling } from './src/server/youthEvents.js';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';

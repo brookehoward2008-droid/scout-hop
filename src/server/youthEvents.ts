@@ -110,8 +110,8 @@ export async function createYouthEventStore() {
   // Import a configured legacy database without inventing geographic coordinates.
   if (process.env.SQL_HOST) {
     try {
-      const { db } = await import('../db/index.ts');
-      const { youthEvents } = await import('../db/schema.ts');
+      const { db } = await import('../db/index.js');
+      const { youthEvents } = await import('../db/schema.js');
       const rows = await db.select().from(youthEvents);
       const imported = rows.map(row => ({
         id: row.id, name: row.name, description: row.description, type: 'youth_center' as const,
