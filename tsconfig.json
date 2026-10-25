@@ -1,5 +1,4 @@
 {
-  "include": ["src/**/*.ts", "src/**/*.tsx", "api/**/*.ts", "tests/**/*.ts", "server.ts", "start.ts", "vite.config.ts"],
   "compilerOptions": {
     "target": "ES2022",
     "experimentalDecorators": true,
@@ -24,5 +23,17 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "src",
+    "server.ts",
+    "start.ts",
+    "api",
+    "vite.config.ts",
+    "tests"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

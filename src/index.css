@@ -1,4 +1,6 @@
+/* src/index.css */
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
@@ -32,7 +34,6 @@
   }
 }
 
-@import "leaflet/dist/leaflet.css";
 
 /* Game-like general styles */
 body {
@@ -56,4 +57,14 @@ body {
   height: 100%;
   z-index: 1;
   font-family: inherit;
+}
+
+/* Keep radar markers legible and contained at every zoom level. */
+.neon-radar-marker { position: relative; display: grid; place-items: center; }
+.radar-ping { width: 14px; height: 14px; border-radius: 50%; background: #10b981; box-shadow: 0 0 10px #10b981; }
+.radar-ring { position: absolute; inset: 4px; border: 2px solid #ec4899; border-radius: 50%; animation: pulse-ring 2.5s ease-out infinite; }
+body { line-height: 1.5; }
+button, input, select { letter-spacing: 0.015em; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+// src/components/YouthDiscoveryModal.tsx
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Building2,
   Calendar,
@@ -24,7 +25,7 @@ import { YouthDiscoveryItem } from '../types';
 interface YouthDiscoveryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectOnMap?: (lat: number, lng: number, zoom?: number) => void;
+  onSelectOnMap?: (lat: number, lng: number, name: string) => void;
 }
 
 export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
@@ -32,10 +33,12 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
   onClose,
   onSelectOnMap,
 }) => {
-  const { setSelectedYouthItem, addScoutPoints } = useApp();
+  const { setSelectedYouthItem } = useApp();
   const [items, setItems] = useState<YouthDiscoveryItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const requestRef = useRef<AbortController | null>(null);
 
   // Filters
   const [countyFilter, setCountyFilter] = useState<'all' | 'king' | 'snohomish'>('all');
@@ -54,11 +57,15 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
   ];
 
   const fetchYouthPlaces = async (customQuery?: string) => {
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
     setLoading(true);
     setError(null);
     try {
       const response = await fetch('/api/youth-events/search', {
         method: 'POST',
+        signal: controller.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: customQuery !== undefined ? customQuery : searchQuery,
@@ -68,16 +75,18 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
       });
 
       const data = await response.json();
+      if (controller.signal.aborted) return;
       if (response.ok && data.items) {
         setItems(data.items);
       } else {
         setError(data.message || 'Failed to load youth centers.');
       }
     } catch (err: any) {
+      if (controller.signal.aborted) return;
       console.error('Fetch youth items error:', err);
       setError('Network error while searching youth places.');
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
 
@@ -86,6 +95,7 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
     if (isOpen) {
       fetchYouthPlaces();
     }
+    return () => requestRef.current?.abort();
   }, [isOpen, countyFilter, categoryFilter]);
 
   if (!isOpen) return null;
@@ -93,32 +103,34 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
   return (
     <div
       id="modal-youth-discovery"
+      role="dialog" aria-modal="true" aria-label="Youth places and events"
       className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in"
     >
       <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-3xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 px-6 py-4 bg-gradient-to-r from-indigo-50/70 via-white to-purple-50/70 dark:from-indigo-950/40 dark:via-stone-900 dark:to-purple-950/30">
+        <div className="flex items-start gap-2 justify-between border-b border-stone-100 dark:border-stone-800 px-6 py-4 bg-gradient-to-r from-indigo-50/70 via-white to-purple-50/70 dark:from-indigo-950/40 dark:via-stone-900 dark:to-purple-950/30">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-md">
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="font-display text-lg sm:text-xl font-bold text-stone-950 dark:text-white flex items-center gap-2">
-                Youth Centers & Free Events API Finder
+              <h2 className="font-display text-lg sm:text-xl font-bold text-stone-950 dark:text-white flex flex-wrap items-center gap-2">
+                Youth Places & Events
                 <span className="rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold px-2 py-0.5 border border-emerald-300 dark:border-emerald-800">
-                  Verified 100% Free
+                  Check organizer details
                 </span>
               </h2>
               <p className="text-xs text-stone-600 dark:text-stone-400">
-                Discover teen life centers, advertised free community days, STEM labs, and open gyms across King & Snohomish.
+                Explore King & Snohomish. Sample listings are labeled; confirm cost and availability before traveling.
               </p>
             </div>
           </div>
 
           <button
             id="btn-close-youth-modal"
+            aria-label="Close youth finder"
             onClick={onClose}
-            className="rounded-xl p-2 text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200 transition-colors"
+            className="shrink-0 rounded-xl p-2 text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800 dark:hover:text-stone-200 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -139,9 +151,10 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
               <input
                 id="input-youth-search"
                 type="text"
+                aria-label="Search youth places and events"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by keyword (e.g., 'esports', 'robotics lab', 'basketball open gym', 'free pizza night', 'Lynnwood STEM')..."
+                placeholder="Search by name, city, or activity"
                 className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 pl-10 pr-4 py-2 text-xs sm:text-sm text-stone-900 dark:text-stone-100 focus:border-indigo-500 focus:outline-none shadow-xs"
               />
             </div>
@@ -152,7 +165,7 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
               className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
               <Search className="h-3.5 w-3.5" />
-              <span>Search API</span>
+              <span>Search</span>
             </button>
             <button
               id="btn-refresh-youth"
@@ -221,10 +234,10 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
             <div className="flex flex-col items-center justify-center py-16 text-center text-stone-500">
               <RefreshCw className="h-8 w-8 animate-spin text-indigo-600 mb-2" />
               <p className="font-bold text-sm text-stone-800 dark:text-stone-200">
-                Searching Youth Centers & Free Events API...
+                Searching youth places and events...
               </p>
               <p className="text-xs text-stone-400 mt-1">
-                Grounded across King and Snohomish municipal directories
+                Loading source listings or labeled directory samples
               </p>
             </div>
           ) : error ? (
@@ -257,7 +270,7 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                   <div>
                     {/* Header & Badges */}
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap mb-1">
                           <span
                             className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
@@ -275,6 +288,7 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                             {item.city}
                           </span>
                         </div>
+                        <p className="mb-1 text-xs font-semibold text-amber-700 dark:text-amber-300">{item.isSample ? 'Sample listing' : item.sourceName || 'Organizer listing'}</p>
                         <h3 className="font-display text-base font-bold text-stone-950 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                           {item.name}
                         </h3>
@@ -293,7 +307,7 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                     {/* Free Perks Callout */}
                     <div className="mt-3 rounded-xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 p-2.5">
                       <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 dark:text-emerald-200">
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <Info className="h-3.5 w-3.5 shrink-0" />
                         <span>{item.freeDetails}</span>
                       </div>
                     </div>
@@ -335,18 +349,20 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
                   <div className="mt-4 pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2">
                     <button
                       id={`btn-plot-youth-${item.id}`}
+                      disabled={item.lat === null || item.lng === null}
                       onClick={() => {
+                        if (item.lat === null || item.lng === null) return;
                         setSelectedYouthItem(item);
-                        onSelectOnMap?.(item.lat, item.lng, 15);
+                        onSelectOnMap?.(item.lat, item.lng, item.name);
                         onClose();
                       }}
-                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 transition-colors"
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <MapPin className="h-3.5 w-3.5" />
-                      <span>View & Route on Map</span>
+                      <span>{item.lat === null || item.lng === null ? 'Location not provided' : 'View on Map'}</span>
                     </button>
 
-                    {item.contactOrLink && (
+                    {item.contactOrLink && /^https?:\/\//i.test(item.contactOrLink) && (
                       <a
                         href={item.contactOrLink}
                         target="_blank"
@@ -365,11 +381,11 @@ export const YouthDiscoveryModal: React.FC<YouthDiscoveryModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-stone-100 dark:border-stone-800 px-6 py-3 bg-stone-50/70 dark:bg-stone-900/60 flex items-center justify-between text-xs text-stone-500 dark:text-stone-400">
+        <div className="border-t border-stone-100 dark:border-stone-800 px-6 py-3 bg-stone-50/70 dark:bg-stone-900/60 flex flex-wrap gap-2 items-center justify-between text-xs text-stone-500 dark:text-stone-400">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-indigo-500" />
             <span>
-              Connected to <strong>King & Snohomish Youth Transit Directory</strong> & Google AI
+              <strong>Source-backed listings and labeled samples.</strong> Check organizer websites.
             </span>
           </div>
           <button

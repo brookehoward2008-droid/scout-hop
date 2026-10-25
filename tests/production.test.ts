@@ -5,10 +5,10 @@ import { once } from 'node:events';
 import { test } from 'node:test';
 
 test('built standalone server serves frontend assets and API', {
-  skip: !existsSync('dist/server.cjs'),
+  skip: !existsSync('dist/server.mjs'),
   timeout: 15000,
 }, async () => {
-  const child = spawn(process.execPath, ['dist/server.cjs'], {
+  const child = spawn(process.execPath, ['dist/server.mjs'], {
     env: { ...process.env, NODE_ENV: 'production', PORT: '0' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
