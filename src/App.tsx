@@ -1,5 +1,6 @@
 // src/App.tsx
 import React, { useCallback, useEffect, useState } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { PRESET_LOCATIONS } from './data/presets';
 import { CommunityPlace, STOPS } from './data/transitCatalog';
 import { GeocachingModal } from './components/GeocachingModal';
@@ -356,7 +357,7 @@ export default function App() {
   return (
     <TransitProvider>
       <AppContent />
+      <SpeedInsights />
     </TransitProvider>
   );
 }
-
