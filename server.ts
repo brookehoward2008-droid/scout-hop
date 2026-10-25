@@ -28,9 +28,8 @@ function getGeminiClient(): GoogleGenAI {
   return geminiClient;
 }
 
-async function startServer() {
+export async function createApp({ serveFrontend = false } = {}) {
   const app = express();
-  const PORT = Number(process.env.PORT || 3000);
 
   app.use(express.json());
 
@@ -309,7 +308,7 @@ async function startServer() {
 
   const youthStore = await createYouthEventStore();
   registerYouthRoutes(app, youthStore);
-  const stopFeedPolling = startFeedPolling(youthStore);
+  app.locals.stopFeedPolling = startFeedPolling(youthStore);
 
   app.get('/api/geocode', async (req, res) => {
     try {
@@ -376,15 +375,20 @@ async function startServer() {
     }
   });
 
-  // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production' && path.basename(process.argv[1] || '') !== 'server.mjs') {
+  // API misses must not fall through to the frontend HTML response.
+  app.use('/api', (req, res) => {
+    res.status(404).json({ error: true, message: 'API route not found.' });
+  });
+
+  // Vercel serves the Vite build separately from the API function.
+  if (serveFrontend && process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (serveFrontend) {
     const distPath = path.basename(currentDir) === 'dist' ? currentDir : path.join(currentDir, 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -392,12 +396,5 @@ async function startServer() {
     });
   }
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Block Explorer server running on http://0.0.0.0:${PORT}`);
-  });
-  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-    process.once(signal, () => { stopFeedPolling(); server.close(() => process.exit(0)); });
-  }
+  return app;
 }
-
-startServer();
